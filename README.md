@@ -4,7 +4,7 @@
 ## 👥 Contributors
 - [Dhyani Patel](https://github.com/Dhyanipatel0526)
 - [Rohith Reddy Tripuravaram](https://github.com/Rohi0035)
-- [Dinakara sai Garikapati](https://github.com/garikipati3)
+- [Dinakara sai Garikipati](https://github.com/garikipati3)
 
  ---
 <!-- TABLE OF CONTENTS -->
