@@ -127,6 +127,8 @@ The project includes at least *eight major features (EPICs)*. Each aligns with t
   - Casual Travelers → Elderly or non-tech-savvy users benefit from voice commands.  
   - Adventure Travelers → Hands-free adjustments while on the go.  
   - Business Travelers → Quick updates during busy trips.
+
+---
  
  ## Preliminary Development Plan  
 
