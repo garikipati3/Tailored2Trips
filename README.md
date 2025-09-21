@@ -165,3 +165,15 @@ The project will follow a *five-phase plan* to ensure structure and clarity.
   - Continuous monitoring of uptime and performance.  
 
 ---
+
+## References  
+
+- Chen, A., et al. *TravelAgent: An AI Assistant for Personalized Travel Itineraries*. 2024. arXiv. [https://arxiv.org/abs/2409.08069](https://arxiv.org/abs/2409.08069)  
+- Shrestha, D., Wenan, T., Rajkarnikar, N., Jeong, S.-R. “Personalized Tourist Recommender System: A Data-Driven and Machine-Learning Approach.” *Computation*, 2024. DOI:10.3390/computation12030059. [https://www.mdpi.com/2079-3197/12/3/59](https://www.mdpi.com/2079-3197/12/3/59)  
+- Tang, Y., Wang, Z., Qu, A., Yan, Y., et al. *ITINERA: Integrating Spatial Optimization with Large Language Models for Open-domain Urban Itinerary Planning*. 2024. arXiv. [https://arxiv.org/abs/2402.07204](https://arxiv.org/abs/2402.07204)  
+- Barua, B., Kaiser, M. S. *Optimizing Travel Itineraries with AI Algorithms in a Microservices Architecture: Balancing Cost, Time, Preferences, and Sustainability*. 2024. arXiv. [https://arxiv.org/abs/2410.17943](https://arxiv.org/abs/2410.17943)  
+- Udandarao, V., Tiju, N. A., Vairamuthu, M., et al. *Roamify: Designing and Evaluating an LLM Based Google Chrome Extension for Personalized Itinerary Planning*. 2025. arXiv. [https://arxiv.org/abs/2504.10489](https://arxiv.org/abs/2504.10489)  
+- Badouch, M., Boutaounte, M. “A Study of Machine Learning Approaches in Tourism / Personalized Travel Recommendation Systems.” *Journal of AI, ML & Neural Networks*, 2023. [https://www.researchgate.net/publication/370274670_Personalized_Travel_Recommendation_Systems_A_Study_of_Machine_Learning_Approaches_in_Tourism](https://www.researchgate.net/publication/370274670_Personalized_Travel_Recommendation_Systems_A_Study_of_Machine_Learning_Approaches_in_Tourism)  
+- Otaki, K., et al. “Travel Itinerary Recommendation Using Interaction-Based Edits.” *Expert Systems with Applications*, 2025. ScienceDirect. [https://www.sciencedirect.com/science/article/pii/S0957417424031610](https://www.sciencedirect.com/science/article/pii/S0957417424031610)
+
+---
