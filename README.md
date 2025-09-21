@@ -49,3 +49,81 @@ The site is designed to support multiple groups with distinct needs:
 - **How the Site Supports Them:** Builds itineraries that balance work hours with sightseeing, integrates location proximity (e.g., hotels near business districts), and suggests evening leisure activities.  
 
 ---
+
+##  Main Functionalities  
+
+The project includes at least *eight major features (EPICs)*. Each aligns with the mission and user needs:  
+
+### 1. Natural Language Input (EPIC)  
+- *Description:* Users can describe trips in plain English, and AI interprets preferences.  
+- *Mission Alignment:* Simplifies planning by eliminating forms and filters.  
+- *User Needs Alignment:*  
+  - Casual Travelers → Type “5-day trip to Italy with food and culture.”  
+  - Adventure Travelers → Request “budget-friendly hiking trip with hostels.”  
+  - Business Travelers → Ask “conference in Berlin with evening leisure options.”  
+
+
+### 2. Personalized Itinerary Generator (EPIC)  
+- *Description:* AI/ML generates tailored travel plans (flights, stays, attractions, dining).  
+- *Mission Alignment:* Central to creating personalized experiences.  
+- *User Needs Alignment:*  
+  - Casual Travelers → Day-by-day optimized itineraries.  
+  - Adventure Travelers → Activity-rich, low-cost schedules.  
+  - Business Travelers → Balanced plans mixing work and leisure.  
+
+
+### 3. Interactive Map & Drag-and-Drop Interface (EPIC)  
+- *Description:* Users can visually rearrange itineraries on an interactive map.  
+- *Mission Alignment:* Makes planning enjoyable and interactive.  
+- *User Needs Alignment:*  
+  - Casual Travelers → Adjust attractions for convenience.  
+  - Adventure Travelers → Reorder hikes or outdoor activities.  
+  - Business Travelers → Prioritize locations near offices/hotels.  
+
+
+### 4. Budget Optimization (EPIC)  
+- *Description:* Suggests itineraries based on chosen budget with cost breakdowns.  
+- *Mission Alignment:* Reduces stress by managing finances effectively.  
+- *User Needs Alignment:*  
+  - Casual Travelers → Maximize experience without overspending.  
+  - Adventure Travelers → Essential for students/backpackers.  
+  - Business Travelers → Aligns with company expense policies.  
+
+
+### 5. Multi-API Integration (EPIC)  
+- *Description:* Combines Google Places, Skyscanner, Airbnb, and OpenWeather data.  
+- *Mission Alignment:* Ensures real-time, accurate planning resources.  
+- *User Needs Alignment:*  
+  - Casual Travelers → Reliable reviews, ratings, and attractions.  
+  - Adventure Travelers → Weather updates for outdoor safety.  
+  - Business Travelers → Reliable travel data for efficient schedules.  
+
+
+
+### 6. Explainable Recommendations (EPIC)  
+- *Description:* Provides reasoning for each suggestion.  
+- *Mission Alignment:* Builds trust and transparency with users.  
+- *User Needs Alignment:*  
+  - Casual Travelers → Understand family-friendly choices.  
+  - Adventure Travelers → Justify hostel/hiking spot recommendations.  
+  - Business Travelers → Clear reasoning for hotel or meeting venue selection.  
+
+
+
+### 7. Group Trip Planning (EPIC)  
+- *Description:* Allows multiple users to collaborate on a shared itinerary.  
+- *Mission Alignment:* Promotes inclusivity and teamwork in planning.  
+- *User Needs Alignment:*  
+  - Casual Travelers → Families and friends plan together.  
+  - Adventure Travelers → Backpackers co-create flexible itineraries.  
+  - Business Travelers → Teams coordinate schedules for events.  
+
+
+
+### 8. Voice/Chatbot Support (EPIC – Future Feature)  
+- *Description:* Enables voice commands or chatbot interaction for hands-free planning.  
+- *Mission Alignment:* Enhances accessibility and reduces barriers.  
+- *User Needs Alignment:*  
+  - Casual Travelers → Elderly or non-tech-savvy users benefit from voice commands.  
+  - Adventure Travelers → Hands-free adjustments while on the go.  
+  - Business Travelers → Quick updates during busy trips.
