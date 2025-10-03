@@ -128,6 +128,34 @@ The project includes at least *eight major features (EPICs)*. Each aligns with t
   - Adventure Travelers → Hands-free adjustments while on the go.  
   - Business Travelers → Quick updates during busy trips.
 
+### 9. Reviews & Ratings (EPIC)  
+- *Description:* Users can leave **star ratings (1–5)** and **text reviews**.  
+- *Supports:* Reviews for the site itself, complete trips, or specific itinerary items (hotels, restaurants, attractions).  
+- *User Needs Alignment:* Builds community trust, provides social validation, and helps improve recommendations.  
+
+### 10. Profile Management (EPIC)  
+- *Description:* Each user has a **personal profile**.  
+- *Features:*  
+  - View and edit account details (name, bio, profile picture).  
+  - Save itineraries for future use.  
+  - Manage **favorites/wishlist** (destinations, hotels, activities).  
+  - View **travel history** (upcoming, completed, cancelled trips).  
+
+### 11. Settings & Security (EPIC)  
+- *Description:* Allows users to configure settings and secure their account.  
+- *Features:*  
+  - Notification preferences (email, push).  
+  - Privacy settings (public or private itineraries).  
+  - Language, theme, and currency preferences.  
+  - **Security:** Two-Factor Authentication (2FA), password reset, account lock, backup codes.  
+
+### 12. Achievements & Badges (EPIC)  
+- *Description:* Adds **gamification** to encourage engagement.  
+- *Features:*  
+  - Users earn badges (e.g., *“Visited 5 Countries”*, *“Adventure Seeker”*).  
+  - Badges displayed on user profile.  
+  - Motivates users to continue planning and sharing trips.
+
 ---
  
  ## Preliminary Development Plan  
