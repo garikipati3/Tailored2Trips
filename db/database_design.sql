@@ -1,4 +1,6 @@
 
+
+
 -- Tailored2Trips — PostgreSQL DDL (v1)
 -- Schema focuses on core features: users, trips, itinerary, reviews, budgets, security, group planning,
 -- preferences, achievements, notifications, and integrations.
