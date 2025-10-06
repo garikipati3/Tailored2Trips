@@ -1,0 +1,53 @@
+
+@startuml
+left to right direction
+actor "Casual Traveler" as Casual
+actor "Adventure/Budget Traveler" as Backpacker
+actor "Business Traveler" as Biz
+actor "Trip Collaborator" as Collab
+
+rectangle Tailored2Trips {
+  usecase "Natural Language Trip Request" as UC1
+  usecase "Generate Personalized Itinerary" as UC2
+  usecase "Interactive Map Reorder" as UC3
+  usecase "Budget Optimization" as UC4
+  usecase "Real-time Data Integrations" as UC5
+  usecase "Explain Recommendations" as UC6
+  usecase "Group Trip Planning" as UC7
+  usecase "Leave Reviews & Ratings" as UC8
+  usecase "Manage Profile & Preferences" as UC9
+  usecase "Earn Badges" as UC10
+  usecase "Security (2FA)" as UC11
+}
+
+Casual --> UC1
+Casual --> UC2
+Casual --> UC3
+Casual --> UC4
+Casual --> UC8
+Casual --> UC9
+Casual --> UC10
+
+Backpacker --> UC1
+Backpacker --> UC2
+Backpacker --> UC3
+Backpacker --> UC4
+Backpacker --> UC5
+Backpacker --> UC8
+
+Biz --> UC1
+Biz --> UC2
+Biz --> UC3
+Biz --> UC4
+Biz --> UC5
+Biz --> UC6
+Biz --> UC9
+
+Collab --> UC7
+
+UC2 --> UC5 : <<includes>>
+UC2 --> UC4 : <<includes>>
+UC2 --> UC6 : <<includes>>
+UC7 --> UC3 : <<extends>>
+
+@enduml
