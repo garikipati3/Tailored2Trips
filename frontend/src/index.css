@@ -1,0 +1,4 @@
+@import "tailwindcss";
+body {
+    @apply transition-colors duration-300; 
+}
