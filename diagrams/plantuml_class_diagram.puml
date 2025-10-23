@@ -1,0 +1,94 @@
+
+@startuml
+skinparam classAttributeIconSize 0
+
+class AppUser {
+  +UUID user_id
+  +CITEXT email
+  +CITEXT username
+  +TEXT password_hash
+  +TEXT full_name
+  +TEXT bio
+  +TEXT profile_photo_url
+  +TEXT locale
+  +CHAR(3) currency
+  +TIMESTAMPTZ created_at
+  +TIMESTAMPTZ updated_at
+  +BOOLEAN is_active
+}
+
+class Trip {
+  +UUID trip_id
+  +UUID owner_id
+  +TEXT title
+  +TEXT description
+  +DATE start_date
+  +DATE end_date
+  +TEXT origin_city
+  +TEXT destination_city
+  +INT total_budget_cents
+  +ENUM visibility
+}
+
+class TripMember {
+  +UUID trip_id
+  +UUID user_id
+  +ENUM role
+  +TIMESTAMPTZ joined_at
+}
+
+class ItineraryDay {
+  +UUID day_id
+  +UUID trip_id
+  +INT day_number
+  +DATE date
+}
+
+class ItineraryItem {
+  +UUID item_id
+  +UUID day_id
+  +INT sort_order
+  +ENUM type
+  +TEXT title
+  +TEXT notes
+  +TIMESTAMPTZ start_time
+  +TIMESTAMPTZ end_time
+  +UUID place_id
+  +INT est_cost_cents
+  +TEXT booking_status
+}
+
+class Place {
+  +UUID place_id
+  +TEXT name
+  +TEXT category
+  +DOUBLE lat
+  +DOUBLE lng
+  +TEXT address
+  +TEXT city
+  +CHAR(2) country_code
+  +JSONB external_ref
+  +NUMERIC rating_avg
+  +INT rating_count
+}
+
+class Booking {
+  +UUID booking_id
+  +UUID item_id
+  +TEXT provider
+  +TEXT provider_ref
+  +TEXT status
+  +INT price_cents
+  +CHAR(3) currency
+  +TIMESTAMPTZ booked_at
+}
+
+AppUser "1" -- "0..*" Trip : owns >
+Trip "1" -- "0..*" TripMember : has >
+AppUser "1" -- "0..*" TripMember : joins >
+Trip "1" -- "1..*" ItineraryDay : contains >
+ItineraryDay "1" -- "0..*" ItineraryItem : includes >
+ItineraryItem "0..1" -- "1" Booking : books >
+ItineraryItem "0..*" -- "0..1" Place : at >
+Place "1" -- "0..*" Booking : mayBeRelatedTo
+@enduml
