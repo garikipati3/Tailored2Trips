@@ -19,16 +19,16 @@ exports.protect = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.appUser.findUnique({
       where: { id: decoded.id },
-      select: { id: true, email: true, Role: true },
+      select: { id: true, email: true, username: true, fullName: true, isActive: true },
     });
 
-    if (!user) {
+    if (!user || !user.isActive) {
       return sendResponse(res, {
         status: 401,
         success: false,
-        message: "Unauthorized: User not found",
+        message: "Unauthorized: User not found or inactive",
       });
     }
 

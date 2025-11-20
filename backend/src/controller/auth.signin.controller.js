@@ -17,7 +17,7 @@ const signinController = async (req, res) => {
   }
 
   try {
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.appUser.findUnique({ where: { email } });
 
     if (!user) {
       return sendResponse(res, {
@@ -27,7 +27,15 @@ const signinController = async (req, res) => {
       });
     }
 
-    const isPasswordValid = bcrypt.compareSync(password, user.password);
+    if (!user.isActive) {
+      return sendResponse(res, {
+        status: 403,
+        success: false,
+        message: "Account is deactivated.",
+      });
+    }
+
+    const isPasswordValid = bcrypt.compareSync(password, user.passwordHash);
     if (!isPasswordValid) {
       return sendResponse(res, {
         status: 401,
@@ -37,7 +45,12 @@ const signinController = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, name: user.name, role: user.Role, email: user.email },
+      { 
+        id: user.id, 
+        username: user.username, 
+        email: user.email,
+        fullName: user.fullName
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
@@ -57,8 +70,8 @@ const signinController = async (req, res) => {
       data: {
         id: user.id,
         email: user.email,
-        role: user.Role,
-        name: user.name,
+        username: user.username,
+        fullName: user.fullName,
       },
     });
   } catch (error) {

@@ -15,9 +15,11 @@ const useAuth = () => {
           credentials: "include",
         });
 
-        if (res.success && res.data?.role) {
+        if (res.success && res.data?.id) {
           setLoggedIn(true);
-          setIsAdmin(res.data.role === "ADMIN");
+          // For now, set isAdmin to false since there's no role field
+          // This can be updated later when admin functionality is needed
+          setIsAdmin(false);
         } else {
           setLoggedIn(false);
           setIsAdmin(false);

@@ -9,6 +9,12 @@ import Dashboard from "./pages/admin/dashboard";
 import EditBlog from "./pages/admin/editBlog";
 import BlogView from "./pages/BlogView";
 import Profile from "./pages/Profile";
+import Trips from "./pages/Trips";
+import TripDetail from "./pages/TripDetail";
+import Itinerary from "./pages/Itinerary";
+import Budget from "./pages/Budget";
+import Places from "./pages/Places";
+import MapView from "./pages/MapView";
 
 function App() {
   return (
@@ -20,6 +26,13 @@ function App() {
         <Route path="/auth/signin" element={<Signin />} />
         <Route path="/auth/signup" element={<Signup />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/trips" element={<Trips />} />
+        <Route path="/trips/:tripId" element={<TripDetail />} />
+        <Route path="/trips/:tripId/itinerary" element={<Itinerary />} />
+        <Route path="/trips/:tripId/budget" element={<Budget />} />
+        <Route path="/trips/:tripId/map" element={<MapView />} />
+        <Route path="/places" element={<Places />} />
+        <Route path="/trips/:tripId/places" element={<Places />} />
         <Route path="/blog/:id" element={<BlogView />} />
         <Route
           path="/admin"

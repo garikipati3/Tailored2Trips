@@ -6,12 +6,12 @@ import { useNavigate } from "react-router-dom";
 export default function Signup() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    name: "",
+    username: "",
+    fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
     otp: "",
-    role: "USER",
   });
 
   const handleChange = (e) => {
@@ -51,8 +51,13 @@ export default function Signup() {
   const handleSignup = async () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!form.name.trim()) {
-      toast.error("Name is required");
+    if (!form.username.trim()) {
+      toast.error("Username is required");
+      return;
+    }
+
+    if (!form.fullName.trim()) {
+      toast.error("Full name is required");
       return;
     }
 
@@ -97,11 +102,11 @@ export default function Signup() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          name: form.name,
+          username: form.username,
+          fullName: form.fullName,
           email: form.email,
           password: form.password,
           otp: form.otp,
-          Role: form.role,
         }),
       });
       console.log("Signup response:", response);
@@ -132,8 +137,16 @@ export default function Signup() {
 
         <div className="flex flex-col gap-4">
           <input
-            name="name"
-            value={form.name}
+            name="username"
+            value={form.username}
+            onChange={handleChange}
+            placeholder="Username"
+            className="border border-gray-400 rounded-lg px-3 py-2 text-black bg-transparent"
+          />
+
+          <input
+            name="fullName"
+            value={form.fullName}
             onChange={handleChange}
             placeholder="Full Name"
             className="border border-gray-400 rounded-lg px-3 py-2 text-black bg-transparent"
@@ -179,33 +192,6 @@ export default function Signup() {
             placeholder="Confirm Password"
             className="border border-gray-400 rounded-lg px-3 py-2 text-black bg-transparent"
           />
-
-
-          <div className="flex items-center gap-6 mt-2">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="role"
-                value="USER"
-                checked={form.role === "USER"}
-                onChange={handleChange}
-                className="accent-black"
-              />
-              <span className="text-black">User</span>
-            </label>
-
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="role"
-                value="ADMIN"
-                checked={form.role === "ADMIN"}
-                onChange={handleChange}
-                className="accent-black"
-              />
-              <span className="text-black">Admin</span>
-            </label>
-          </div>
 
           <button
             onClick={handleSignup}

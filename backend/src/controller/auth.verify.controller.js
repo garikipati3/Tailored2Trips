@@ -26,9 +26,9 @@ const getMe = (req, res) => {
       message: "Authenticated",
       data: {
         id: decoded.id,
-        name: decoded.name,
+        username: decoded.username,
         email: decoded.email,
-        role: decoded.role,
+        fullName: decoded.fullName,
       },
     });
   } catch (error) {

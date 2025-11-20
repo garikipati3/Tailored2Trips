@@ -50,7 +50,7 @@ export default function Signin() {
       }
 
       toast.success("Signin successful!");
-      navigate("/Dashboard");
+      navigate("/trips");
       
     } catch (err) {
       console.error("Signin error:", err);

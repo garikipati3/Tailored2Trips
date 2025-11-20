@@ -8,30 +8,387 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  Role      Role
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// 1) USERS & AUTH
+model AppUser {
+  id                String   @id @default(uuid()) @map("user_id")
+  email             String   @unique
+  username          String   @unique
+  passwordHash      String   @map("password_hash")
+  fullName          String?  @map("full_name")
+  bio               String?
+  profilePhotoUrl   String?  @map("profile_photo_url")
+  locale            String   @default("en-US")
+  currency          String   @default("USD") @db.Char(3)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  isActive          Boolean  @default(true) @map("is_active")
 
-  blogs     Blog[]   @relation("UserBlogs")
+  // Relations
+  userSecurity      UserSecurity?
+  userSessions      UserSession[]
+  oauthAccounts     OAuthAccount[]
+  userPreferences   UserPreferences?
+  ownedTrips        Trip[]           @relation("TripOwner")
+  tripMemberships   TripMember[]
+  reviews           Review[]
+  favorites         Favorite[]
+  notifications     Notification[]
+  userBadges        UserBadge[]
+  recommendationLogs RecommendationLog[]
+  auditLogs         AuditLog[]
+  sentMessages      TripMessage[]
+
+  @@map("app_user")
 }
 
-model Blog {
-  id        String   @id @default(uuid())
-  title     String
-  content   String
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model UserSecurity {
+  userId              String    @id @map("user_id")
+  has2fa              Boolean   @default(false) @map("has_2fa")
+  totpSecret          String?   @map("totp_secret")
+  backupCodesHash     String[]  @map("backup_codes_hash")
+  lastPasswordResetAt DateTime? @map("last_password_reset_at")
 
-  author    User     @relation("UserBlogs", fields: [authorId], references: [id])
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_security")
 }
 
-enum Role {
-  ADMIN
+model UserSession {
+  id        String    @id @default(uuid()) @map("session_id")
+  userId    String    @map("user_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  expiresAt DateTime  @map("expires_at")
+  userAgent String?   @map("user_agent")
+  ipAddr    String?   @map("ip_addr")
+
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_session")
+}
+
+model OAuthAccount {
+  userId         String @map("user_id")
+  provider       String
+  providerUserId String @map("provider_user_id")
+
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@map("oauth_account")
+}
+
+// 2) PREFERENCES & SETTINGS
+model UserPreferences {
+  userId            String   @id @map("user_id")
+  travelStyles      String[] @map("travel_styles")
+  interests         String[]
+  budgetMin         Int?     @map("budget_min")
+  budgetMax         Int?     @map("budget_max")
+  homeAirport       String?  @map("home_airport")
+  languages         String[]
+  notificationEmail Boolean  @default(true) @map("notification_email")
+  notificationPush  Boolean  @default(true) @map("notification_push")
+  theme             String   @default("system")
+
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+// 3) PLACES & EXTERNAL DATA
+model Place {
+  id          String  @id @default(uuid()) @map("place_id")
+  name        String
+  category    String
+  lat         Float?
+  lng         Float?
+  address     String?
+  city        String?
+  countryCode String? @map("country_code") @db.Char(2)
+  externalRef Json?   @map("external_ref")
+  ratingAvg   Float?  @map("rating_avg")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  itineraryItems   ItineraryItem[]
+  weatherSnapshots WeatherSnapshot[]
+
+  @@map("place")
+}
+
+// 4) TRIPS & COLLABORATION
+enum TripVisibility {
+  PUBLIC
+  PRIVATE
+  FRIENDS_ONLY
+
+  @@map("trip_visibility")
+}
+
+enum TripRole {
+  OWNER
+  EDITOR
+  VIEWER
+
+  @@map("trip_role")
+}
+
+model Trip {
+  id                String         @id @default(uuid()) @map("trip_id")
+  title             String
+  description       String?
+  startDate         DateTime       @map("start_date")
+  endDate           DateTime       @map("end_date")
+  originCity        String?        @map("origin_city")
+  destinationCity   String?        @map("destination_city")
+  visibility        TripVisibility @default(PRIVATE)
+  totalBudgetCents  Int?           @map("total_budget_cents")
+  ownerId           String         @map("owner_id")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  owner            AppUser           @relation("TripOwner", fields: [ownerId], references: [id])
+  members          TripMember[]
+  itineraryDays    ItineraryDay[]
+  budgetLines      TripBudgetLine[]
+  messages         TripMessage[]
+  recommendationLogs RecommendationLog[]
+
+  @@map("trip")
+}
+
+model TripMember {
+  tripId   String   @map("trip_id")
+  userId   String   @map("user_id")
+  role     TripRole
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  trip Trip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([tripId, userId])
+  @@map("trip_member")
+}
+
+// 5) ITINERARY & ITEMS
+model ItineraryDay {
+  id        String @id @default(uuid()) @map("day_id")
+  tripId    String @map("trip_id")
+  dayNumber Int    @map("day_number")
+  date      DateTime
+  notes     String?
+
+  trip  Trip            @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  items ItineraryItem[]
+
+  @@unique([tripId, dayNumber])
+  @@map("itinerary_day")
+}
+
+enum ItemType {
+  FLIGHT
+  HOTEL
+  ACTIVITY
+  RESTAURANT
+  TRANSPORT
+  FREE_TIME
+
+  @@map("item_type")
+}
+
+model ItineraryItem {
+  id              String    @id @default(uuid()) @map("item_id")
+  dayId           String    @map("day_id")
+  type            ItemType
+  title           String
+  description     String?
+  startTime       DateTime? @map("start_time")
+  endTime         DateTime? @map("end_time")
+  placeId         String?   @map("place_id")
+  sortOrder       Int       @map("sort_order")
+  costCents       Int?      @map("cost_cents")
+  externalBooking Json?     @map("external_booking")
+  explainability Json?
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  day     ItineraryDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  place   Place?       @relation(fields: [placeId], references: [id])
+  booking Booking?
+
+  @@map("itinerary_item")
+}
+
+// 6) BOOKINGS & EXTERNAL INTEGRATIONS
+model Booking {
+  id           String  @id @default(uuid()) @map("booking_id")
+  itemId       String  @unique @map("item_id")
+  provider     String
+  providerRef  String  @map("provider_ref")
+  status       String
+  totalCents   Int     @map("total_cents")
+  currency     String  @db.Char(3)
+  bookedAt     DateTime @map("booked_at")
+  confirmationCode String? @map("confirmation_code")
+
+  item ItineraryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("booking")
+}
+
+// 7) BUDGET MANAGEMENT
+model CostCategory {
+  code  String @id
+  label String
+
+  budgetLines TripBudgetLine[]
+
+  @@map("cost_category")
+}
+
+model TripBudgetLine {
+  id           String @id @default(uuid()) @map("budget_line_id")
+  tripId       String @map("trip_id")
+  categoryCode String @map("category_code")
+  budgetCents  Int    @map("budget_cents")
+  spentCents   Int    @default(0) @map("spent_cents")
+
+  trip     Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  category CostCategory @relation(fields: [categoryCode], references: [code])
+
+  @@unique([tripId, categoryCode])
+  @@map("trip_budget_line")
+}
+
+// 8) REVIEWS & RATINGS
+enum TargetType {
+  PLACE
+  TRIP
   USER
+
+  @@map("target_type")
+}
+
+model Review {
+  id         String     @id @default(uuid()) @map("review_id")
+  userId     String     @map("user_id")
+  targetType TargetType @map("target_type")
+  targetId   String     @map("target_id")
+  rating     Int        @db.SmallInt
+  title      String?
+  content    String?
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetType, targetId])
+  @@map("review")
+}
+
+// 9) FAVORITES & SOCIAL
+model Favorite {
+  userId     String     @map("user_id")
+  targetType TargetType @map("target_type")
+  targetId   String     @map("target_id")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, targetType, targetId])
+  @@map("favorite")
+}
+
+// 10) MESSAGING & NOTIFICATIONS
+model TripMessage {
+  id        String   @id @default(uuid()) @map("message_id")
+  tripId    String   @map("trip_id")
+  senderId  String   @map("sender_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  trip   Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  sender AppUser  @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@map("trip_message")
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @map("notification_id")
+  userId    String   @map("user_id")
+  type      String
+  title     String
+  message   String
+  payload   Json?
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification")
+}
+
+// 11) WEATHER SNAPSHOTS
+model WeatherSnapshot {
+  id         String   @id @default(uuid()) @map("snapshot_id")
+  placeId    String   @map("place_id")
+  capturedAt DateTime @default(now()) @map("captured_at")
+  payload    Json
+
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@map("weather_snapshot")
+}
+
+// 12) ACHIEVEMENTS & BADGES
+model Badge {
+  code        String @id @map("badge_code")
+  name        String
+  description String
+  iconUrl     String? @map("icon_url")
+
+  userBadges UserBadge[]
+
+  @@map("badge")
+}
+
+model UserBadge {
+  userId    String   @map("user_id")
+  badgeCode String   @map("badge_code")
+  awardedAt DateTime @default(now()) @map("awarded_at")
+
+  user  AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge   @relation(fields: [badgeCode], references: [code], onDelete: Cascade)
+
+  @@id([userId, badgeCode])
+  @@map("user_badge")
+}
+
+// 13) EXPLAINABLE RECOMMENDATIONS
+model RecommendationLog {
+  id           String   @id @default(uuid()) @map("rec_id")
+  userId       String?  @map("user_id")
+  tripId       String?  @map("trip_id")
+  context      Json
+  explanations Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user AppUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  trip Trip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
+
+  @@map("recommendation_log")
+}
+
+// 14) AUDIT LOGS
+model AuditLog {
+  id           String   @id @default(uuid()) @map("log_id")
+  actorUserId  String?  @map("actor_user_id")
+  action       String
+  targetType   String?  @map("target_type")
+  targetId     String?  @map("target_id")
+  details      Json?
+  occurredAt   DateTime @default(now()) @map("occurred_at")
+
+  actor AppUser? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@map("audit_log")
 }

@@ -7,34 +7,55 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const signupController = async (req, res) => {
-  const { name, email, password, Role } = req.body;
+  const { username, email, password, fullName } = req.body;
 
-  if (!name || !email || !password || !Role) {
+  if (!username || !email || !password) {
     return sendResponse(res, {
       status: 400,
       success: false,
-      message: "All fields (name, email, password, role) are required.",
+      message: "Username, email, and password are required.",
     });
   }
 
   try {
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    // Check if user already exists by email or username
+    const existingUser = await prisma.appUser.findFirst({
+      where: {
+        OR: [
+          { email },
+          { username }
+        ]
+      }
+    });
+
     if (existingUser) {
+      const field = existingUser.email === email ? "email" : "username";
       return sendResponse(res, {
         status: 400,
         success: false,
-        message: "User already exists.",
+        message: `User with this ${field} already exists.`,
       });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = await prisma.user.create({
-      data: { name, email, password: hashedPassword, Role },
+    const newUser = await prisma.appUser.create({
+      data: { 
+        username, 
+        email, 
+        passwordHash: hashedPassword, 
+        fullName: fullName || null,
+        isActive: true
+      },
     });
 
     const token = jwt.sign(
-      { id: newUser.id, name: newUser.name, role: newUser.Role, email: newUser.email },
+      { 
+        id: newUser.id, 
+        username: newUser.username, 
+        email: newUser.email,
+        fullName: newUser.fullName
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
@@ -53,9 +74,9 @@ const signupController = async (req, res) => {
       message: "User registered successfully.",
       data: {
         id: newUser.id,
-        name: newUser.name,
+        username: newUser.username,
         email: newUser.email,
-        role: newUser.Role,
+        fullName: newUser.fullName,
       },
     });
   } catch (error) {
