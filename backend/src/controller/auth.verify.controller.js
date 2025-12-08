@@ -8,7 +8,7 @@ const getMe = (req, res) => {
   try {
     const token = req.cookies?.token;
 
-    console.log("req came", token);
+    
 
     if (!token) {
       return sendResponse(res, {
@@ -29,6 +29,7 @@ const getMe = (req, res) => {
         username: decoded.username,
         email: decoded.email,
         fullName: decoded.fullName,
+        role: decoded.role,
       },
     });
   } catch (error) {
@@ -41,4 +42,3 @@ const getMe = (req, res) => {
 };
 
 module.exports = getMe;
-

@@ -54,7 +54,8 @@ const signupController = async (req, res) => {
         id: newUser.id, 
         username: newUser.username, 
         email: newUser.email,
-        fullName: newUser.fullName
+        fullName: newUser.fullName,
+        role: newUser.role
       },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
@@ -64,7 +65,7 @@ const signupController = async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: isProd,
-      sameSite: isProd ? "None" : "strict",
+      sameSite: isProd ? "None" : "lax",
       maxAge: 24 * 60 * 60 * 1000,
     });
 
@@ -77,6 +78,7 @@ const signupController = async (req, res) => {
         username: newUser.username,
         email: newUser.email,
         fullName: newUser.fullName,
+        role: newUser.role,
       },
     });
   } catch (error) {

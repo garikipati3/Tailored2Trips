@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useEffect, useState } from "react";
 import fetcher from "./fetcher";
 
@@ -17,9 +18,7 @@ const useAuth = () => {
 
         if (res.success && res.data?.id) {
           setLoggedIn(true);
-          // For now, set isAdmin to false since there's no role field
-          // This can be updated later when admin functionality is needed
-          setIsAdmin(false);
+          setIsAdmin(res.data?.role === 'ADMIN');
         } else {
           setLoggedIn(false);
           setIsAdmin(false);

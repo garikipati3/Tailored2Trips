@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import fetcher from '../utils/fetcher';
 
-const PlaceSearch = ({ onPlaceSelect, placeholder = "Search for places...", className = "" }) => {
+const PlaceSearch = ({ onPlaceSelect, placeholder = "Search for places...", className = "", inputClassName = "", useAutocomplete = false }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +43,10 @@ const PlaceSearch = ({ onPlaceSelect, placeholder = "Search for places...", clas
   const searchPlaces = async (searchQuery) => {
     try {
       setIsLoading(true);
-      const response = await fetcher(`/api/places/search?query=${encodeURIComponent(searchQuery)}`);
+      const endpoint = useAutocomplete
+        ? `/api/places/autocomplete?input=${encodeURIComponent(searchQuery)}`
+        : `/api/places/search?query=${encodeURIComponent(searchQuery)}`;
+      const response = await fetcher(endpoint);
       
       if (response.success && response.data.places) {
         setResults(response.data.places);
@@ -87,7 +90,7 @@ const PlaceSearch = ({ onPlaceSelect, placeholder = "Search for places...", clas
           onChange={handleInputChange}
           onFocus={handleInputFocus}
           placeholder={placeholder}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${inputClassName}`}
         />
         
         {isLoading && (

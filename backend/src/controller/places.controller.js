@@ -1,15 +1,32 @@
 const { sendResponse } = require("../utils/sendResponse");
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
-// Search places using Google Places API
+// Search places using Google Places API (fallback to mock)
 const searchPlaces = async (req, res) => {
   try {
     const { query, location, radius = 50000, type } = req.query;
 
     if (!query) {
-      return sendResponse(res, 400, "Query parameter is required");
+      return sendResponse(res, { status: 400, success: false, message: "Query parameter is required" });
+    }
+    
+    if (GOOGLE_MAPS_API_KEY) {
+      const params = new URLSearchParams({
+        query,
+        key: GOOGLE_MAPS_API_KEY
+      });
+      if (type) params.set('type', type);
+      const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?${params.toString()}`;
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const data = await resp.json();
+        return sendResponse(res, { status: 200, success: true, message: "Places retrieved successfully", data: {
+          places: data.results,
+          status: data.status
+        }});
+      }
     }
 
-    // For now, return mock data - will integrate with Google Places API later
     const mockPlaces = [
       {
         place_id: "ChIJN1t_tDeuEmsRUsoyG83frY4",
@@ -70,33 +87,44 @@ const searchPlaces = async (req, res) => {
       }
     ];
 
-    // Filter by query
     const filteredPlaces = mockPlaces.filter(place => 
       place.name.toLowerCase().includes(query.toLowerCase()) ||
       place.formatted_address.toLowerCase().includes(query.toLowerCase())
     );
 
-    return sendResponse(res, 200, "Places retrieved successfully", {
+    return sendResponse(res, { status: 200, success: true, message: "Places retrieved successfully", data: {
       places: filteredPlaces,
       status: "OK"
-    });
+    }});
 
   } catch (error) {
     console.error("Error searching places:", error);
-    return sendResponse(res, 500, "Internal server error");
+    return sendResponse(res, { status: 500, success: false, message: "Internal server error" });
   }
 };
 
-// Get place details by place_id
+// Get place details by place_id (fallback to mock)
 const getPlaceDetails = async (req, res) => {
   try {
     const { placeId } = req.params;
 
     if (!placeId) {
-      return sendResponse(res, 400, "Place ID is required");
+      return sendResponse(res, { status: 400, success: false, message: "Place ID is required" });
     }
 
-    // Mock place details - will integrate with Google Places API later
+    if (GOOGLE_MAPS_API_KEY) {
+      const params = new URLSearchParams({ place_id: placeId, key: GOOGLE_MAPS_API_KEY });
+      const url = `https://maps.googleapis.com/maps/api/place/details/json?${params.toString()}`;
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const data = await resp.json();
+        return sendResponse(res, { status: 200, success: true, message: "Place details retrieved successfully", data: {
+          place: data.result,
+          status: data.status
+        }});
+      }
+    }
+
     const mockPlaceDetails = {
       place_id: placeId,
       name: "Sydney Opera House",
@@ -152,27 +180,44 @@ const getPlaceDetails = async (req, res) => {
       ]
     };
 
-    return sendResponse(res, 200, "Place details retrieved successfully", {
+    return sendResponse(res, { status: 200, success: true, message: "Place details retrieved successfully", data: {
       place: mockPlaceDetails,
       status: "OK"
-    });
+    }});
 
   } catch (error) {
     console.error("Error getting place details:", error);
-    return sendResponse(res, 500, "Internal server error");
+    return sendResponse(res, { status: 500, success: false, message: "Internal server error" });
   }
 };
 
-// Get nearby places
+// Get nearby places (fallback to mock)
 const getNearbyPlaces = async (req, res) => {
   try {
     const { lat, lng, radius = 5000, type } = req.query;
 
     if (!lat || !lng) {
-      return sendResponse(res, 400, "Latitude and longitude are required");
+      return sendResponse(res, { status: 400, success: false, message: "Latitude and longitude are required" });
     }
 
-    // Mock nearby places - will integrate with Google Places API later
+    if (GOOGLE_MAPS_API_KEY) {
+      const params = new URLSearchParams({
+        location: `${lat},${lng}`,
+        radius: String(radius),
+        key: GOOGLE_MAPS_API_KEY
+      });
+      if (type) params.set('type', type);
+      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?${params.toString()}`;
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const data = await resp.json();
+        return sendResponse(res, { status: 200, success: true, message: "Nearby places retrieved successfully", data: {
+          places: data.results,
+          status: data.status
+        }});
+      }
+    }
+
     const mockNearbyPlaces = [
       {
         place_id: "ChIJN1t_tDeuEmsRUsoyG83frY4",
@@ -214,14 +259,14 @@ const getNearbyPlaces = async (req, res) => {
       );
     }
 
-    return sendResponse(res, 200, "Nearby places retrieved successfully", {
+    return sendResponse(res, { status: 200, success: true, message: "Nearby places retrieved successfully", data: {
       places: filteredPlaces,
       status: "OK"
-    });
+    }});
 
   } catch (error) {
     console.error("Error getting nearby places:", error);
-    return sendResponse(res, 500, "Internal server error");
+    return sendResponse(res, { status: 500, success: false, message: "Internal server error" });
   }
 };
 
@@ -232,19 +277,66 @@ const getPlacePhoto = async (req, res) => {
     const { maxwidth = 400, maxheight = 400 } = req.query;
 
     if (!photoReference) {
-      return sendResponse(res, 400, "Photo reference is required");
+      return sendResponse(res, { status: 400, success: false, message: "Photo reference is required" });
     }
 
     // For now, return a placeholder image URL
     const photoUrl = `https://via.placeholder.com/${maxwidth}x${maxheight}?text=Place+Photo`;
 
-    return sendResponse(res, 200, "Photo URL retrieved successfully", {
+    return sendResponse(res, { status: 200, success: true, message: "Photo URL retrieved successfully", data: {
       photo_url: photoUrl
-    });
+    }});
 
   } catch (error) {
     console.error("Error getting place photo:", error);
-    return sendResponse(res, 500, "Internal server error");
+    return sendResponse(res, { status: 500, success: false, message: "Internal server error" });
+  }
+};
+
+// Autocomplete place suggestions (cities/locations)
+const autocompletePlaces = async (req, res) => {
+  try {
+    const { input } = req.query;
+
+    if (!input || input.trim().length < 1) {
+      return sendResponse(res, { status: 400, success: false, message: "Input parameter is required" });
+    }
+
+    if (GOOGLE_MAPS_API_KEY) {
+      const params = new URLSearchParams({
+        input,
+        key: GOOGLE_MAPS_API_KEY,
+        types: "(cities)"
+      });
+      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?${params.toString()}`;
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const data = await resp.json();
+        const places = (data.predictions || []).map((p) => ({
+          place_id: p.place_id,
+          name: p.description,
+          formatted_address: p.description
+        }));
+        return sendResponse(res, { status: 200, success: true, message: "Autocomplete results retrieved", data: { places, status: data.status } });
+      }
+    }
+
+    const suggestions = [];
+    const q = input.toLowerCase();
+    const catalog = [
+      { name: "Berlin, Germany", place_id: "mock_berlin", formatted_address: "Berlin, Germany" },
+      { name: "Bern, Switzerland", place_id: "mock_bern", formatted_address: "Bern, Switzerland" },
+      { name: "Bergen, Norway", place_id: "mock_bergen", formatted_address: "Bergen, Norway" },
+      { name: "Birmingham, United Kingdom", place_id: "mock_birmingham", formatted_address: "Birmingham, UK" },
+    ];
+    for (const c of catalog) {
+      if (c.name.toLowerCase().includes(q)) suggestions.push(c);
+    }
+
+    return sendResponse(res, { status: 200, success: true, message: "Autocomplete results retrieved", data: { places: suggestions, status: "OK" } });
+  } catch (error) {
+    console.error("Error autocomplete places:", error);
+    return sendResponse(res, { status: 500, success: false, message: "Internal server error" });
   }
 };
 
@@ -252,5 +344,6 @@ module.exports = {
   searchPlaces,
   getPlaceDetails,
   getNearbyPlaces,
-  getPlacePhoto
+  getPlacePhoto,
+  autocompletePlaces
 };

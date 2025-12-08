@@ -26,6 +26,16 @@ export default function TopBar() {
         <div className="flex items-center space-x-6">
           <nav className="flex space-x-6">
             <button
+              onClick={() => navigate('/dashboard')}
+              className={`text-sm font-medium transition-colors duration-200 ${
+                location.pathname === '/' || location.pathname.startsWith('/dashboard')
+                  ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Dashboard
+            </button>
+            <button
               onClick={() => navigate('/trips')}
               className={`text-sm font-medium transition-colors duration-200 ${
                 location.pathname.startsWith('/trips')

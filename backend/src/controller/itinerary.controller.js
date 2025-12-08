@@ -1,18 +1,14 @@
 const prisma = require("../lib/db");
 const { sendResponse } = require("../utils/sendResponse");
 
-// Get itinerary for a specific trip
+// Get itinerary for a specific trip (aligned with Prisma models)
 const getTripItinerary = async (req, res) => {
   try {
     const { tripId } = req.params;
     const userId = req.user.id;
 
-    // Check if user has access to this trip
     const tripMember = await prisma.tripMember.findFirst({
-      where: {
-        tripId: parseInt(tripId),
-        userId: userId
-      }
+      where: { tripId, userId }
     });
 
     if (!tripMember) {
@@ -23,18 +19,19 @@ const getTripItinerary = async (req, res) => {
       });
     }
 
-    // Get trip details with itinerary items
     const trip = await prisma.trip.findUnique({
-      where: { id: parseInt(tripId) },
+      where: { id: tripId },
       include: {
-        itineraryItems: {
-          orderBy: [
-            { day: 'asc' },
-            { startTime: 'asc' },
-            { order: 'asc' }
-          ],
+        itineraryDays: {
+          orderBy: { dayNumber: 'asc' },
           include: {
-            place: true
+            items: {
+              orderBy: [
+                { sortOrder: 'asc' },
+                { startTime: 'asc' }
+              ],
+              include: { place: true }
+            }
           }
         }
       }
@@ -48,27 +45,11 @@ const getTripItinerary = async (req, res) => {
       });
     }
 
-    // Group itinerary items by day
-    const itineraryByDay = {};
-    const totalDays = Math.ceil((new Date(trip.endDate) - new Date(trip.startDate)) / (1000 * 60 * 60 * 24)) + 1;
-
-    // Initialize all days
-    for (let day = 1; day <= totalDays; day++) {
-      const date = new Date(trip.startDate);
-      date.setDate(date.getDate() + (day - 1));
-      itineraryByDay[day] = {
-        day,
-        date: date.toISOString().split('T')[0],
-        items: []
-      };
-    }
-
-    // Add items to their respective days
-    trip.itineraryItems.forEach(item => {
-      if (itineraryByDay[item.day]) {
-        itineraryByDay[item.day].items.push(item);
-      }
-    });
+    const itinerary = trip.itineraryDays.map((day) => ({
+      day: day.dayNumber,
+      date: day.date,
+      items: day.items
+    }));
 
     return sendResponse(res, {
       status: 200,
@@ -78,15 +59,14 @@ const getTripItinerary = async (req, res) => {
         trip: {
           id: trip.id,
           title: trip.title,
-          destination: trip.destination,
+          destination: trip.destinationCity,
           startDate: trip.startDate,
           endDate: trip.endDate
         },
-        itinerary: Object.values(itineraryByDay)
+        itinerary
       },
     });
   } catch (error) {
-    console.error("Get trip itinerary error:", error);
     return sendResponse(res, {
       status: 500,
       success: false,
@@ -95,7 +75,7 @@ const getTripItinerary = async (req, res) => {
   }
 };
 
-// Add new itinerary item
+// Add new itinerary item (aligned with Prisma models)
 const addItineraryItem = async (req, res) => {
   try {
     const { tripId } = req.params;
@@ -106,7 +86,6 @@ const addItineraryItem = async (req, res) => {
       description,
       startTime,
       endTime,
-      placeId,
       placeName,
       placeAddress,
       placeLatitude,
@@ -116,7 +95,6 @@ const addItineraryItem = async (req, res) => {
       notes
     } = req.body;
 
-    // Validation
     if (!day || !title) {
       return sendResponse(res, {
         status: 400,
@@ -125,12 +103,8 @@ const addItineraryItem = async (req, res) => {
       });
     }
 
-    // Check if user has access to this trip
     const tripMember = await prisma.tripMember.findFirst({
-      where: {
-        tripId: parseInt(tripId),
-        userId: userId
-      }
+      where: { tripId, userId }
     });
 
     if (!tripMember) {
@@ -141,62 +115,60 @@ const addItineraryItem = async (req, res) => {
       });
     }
 
-    // Get the next order number for this day
-    const lastItem = await prisma.itineraryItem.findFirst({
-      where: {
-        tripId: parseInt(tripId),
-        day: parseInt(day)
-      },
-      orderBy: { order: 'desc' }
+    let itineraryDay = await prisma.itineraryDay.findFirst({
+      where: { tripId, dayNumber: parseInt(day) }
     });
+    if (!itineraryDay) {
+      const trip = await prisma.trip.findUnique({ where: { id: tripId } });
+      const date = new Date(trip.startDate);
+      date.setDate(date.getDate() + (parseInt(day) - 1));
+      itineraryDay = await prisma.itineraryDay.create({
+        data: { tripId, dayNumber: parseInt(day), date }
+      });
+    }
 
-    const nextOrder = lastItem ? lastItem.order + 1 : 1;
+    const lastItem = await prisma.itineraryItem.findFirst({
+      where: { dayId: itineraryDay.id },
+      orderBy: { sortOrder: 'desc' }
+    });
+    const nextOrder = lastItem ? lastItem.sortOrder + 1 : 1;
 
-    // Create place if provided
     let place = null;
-    if (placeId || (placeName && placeLatitude && placeLongitude)) {
-      place = await prisma.place.upsert({
-        where: { 
-          googlePlaceId: placeId || `custom_${Date.now()}_${Math.random()}`
-        },
-        update: {},
-        create: {
-          googlePlaceId: placeId || `custom_${Date.now()}_${Math.random()}`,
+    if (placeName && placeLatitude && placeLongitude) {
+      place = await prisma.place.create({
+        data: {
           name: placeName,
+          category: category || 'ACTIVITY',
           address: placeAddress,
-          latitude: placeLatitude ? parseFloat(placeLatitude) : null,
-          longitude: placeLongitude ? parseFloat(placeLongitude) : null,
-          category: category || 'OTHER'
+          lat: parseFloat(placeLatitude),
+          lng: parseFloat(placeLongitude)
         }
       });
     }
 
-    // Create itinerary item
+    const typeMap = {
+      ACTIVITY: 'ACTIVITY',
+      ACCOMMODATION: 'HOTEL',
+      TRANSPORTATION: 'TRANSPORT',
+      RESTAURANT: 'RESTAURANT',
+      SHOPPING: 'ACTIVITY',
+      OTHER: 'FREE_TIME'
+    };
+
     const itineraryItem = await prisma.itineraryItem.create({
       data: {
-        tripId: parseInt(tripId),
-        day: parseInt(day),
+        dayId: itineraryDay.id,
+        type: typeMap[category] || 'ACTIVITY',
         title,
         description,
         startTime: startTime ? new Date(`1970-01-01T${startTime}:00Z`) : null,
         endTime: endTime ? new Date(`1970-01-01T${endTime}:00Z`) : null,
-        placeId: place?.id,
-        category: category || 'ACTIVITY',
-        estimatedCost: estimatedCost ? parseFloat(estimatedCost) : null,
-        notes,
-        order: nextOrder,
-        createdById: userId
+        placeId: place?.id || null,
+        sortOrder: nextOrder,
+        costCents: estimatedCost ? Math.round(parseFloat(estimatedCost) * 100) : null,
+        explainability: notes ? { notes } : null
       },
-      include: {
-        place: true,
-        createdBy: {
-          select: {
-            id: true,
-            username: true,
-            fullName: true
-          }
-        }
-      }
+      include: { place: true }
     });
 
     return sendResponse(res, {
@@ -206,7 +178,6 @@ const addItineraryItem = async (req, res) => {
       data: itineraryItem,
     });
   } catch (error) {
-    console.error("Add itinerary item error:", error);
     return sendResponse(res, {
       status: 500,
       success: false,
@@ -215,7 +186,7 @@ const addItineraryItem = async (req, res) => {
   }
 };
 
-// Update itinerary item
+// Update itinerary item (aligned with Prisma models)
 const updateItineraryItem = async (req, res) => {
   try {
     const { tripId, itemId } = req.params;
@@ -230,13 +201,7 @@ const updateItineraryItem = async (req, res) => {
       notes
     } = req.body;
 
-    // Check if user has access to this trip
-    const tripMember = await prisma.tripMember.findFirst({
-      where: {
-        tripId: parseInt(tripId),
-        userId: userId
-      }
-    });
+    const tripMember = await prisma.tripMember.findFirst({ where: { tripId, userId } });
 
     if (!tripMember) {
       return sendResponse(res, {
@@ -246,13 +211,7 @@ const updateItineraryItem = async (req, res) => {
       });
     }
 
-    // Check if item exists and belongs to this trip
-    const existingItem = await prisma.itineraryItem.findFirst({
-      where: {
-        id: parseInt(itemId),
-        tripId: parseInt(tripId)
-      }
-    });
+    const existingItem = await prisma.itineraryItem.findUnique({ where: { id: itemId }, include: { day: true } });
 
     if (!existingItem) {
       return sendResponse(res, {
@@ -262,29 +221,27 @@ const updateItineraryItem = async (req, res) => {
       });
     }
 
-    // Update the item
+    const typeMap = {
+      ACTIVITY: 'ACTIVITY',
+      ACCOMMODATION: 'HOTEL',
+      TRANSPORTATION: 'TRANSPORT',
+      RESTAURANT: 'RESTAURANT',
+      SHOPPING: 'ACTIVITY',
+      OTHER: 'FREE_TIME'
+    };
+
     const updatedItem = await prisma.itineraryItem.update({
-      where: { id: parseInt(itemId) },
+      where: { id: itemId },
       data: {
         ...(title && { title }),
         ...(description !== undefined && { description }),
         ...(startTime && { startTime: new Date(`1970-01-01T${startTime}:00Z`) }),
         ...(endTime && { endTime: new Date(`1970-01-01T${endTime}:00Z`) }),
-        ...(category && { category }),
-        ...(estimatedCost !== undefined && { estimatedCost: estimatedCost ? parseFloat(estimatedCost) : null }),
-        ...(notes !== undefined && { notes }),
-        updatedAt: new Date()
+        ...(category && { type: typeMap[category] || undefined }),
+        ...(estimatedCost !== undefined && { costCents: estimatedCost ? Math.round(parseFloat(estimatedCost) * 100) : null }),
+        ...(notes !== undefined && { explainability: notes ? { notes } : null })
       },
-      include: {
-        place: true,
-        createdBy: {
-          select: {
-            id: true,
-            username: true,
-            fullName: true
-          }
-        }
-      }
+      include: { place: true }
     });
 
     return sendResponse(res, {
@@ -294,7 +251,6 @@ const updateItineraryItem = async (req, res) => {
       data: updatedItem,
     });
   } catch (error) {
-    console.error("Update itinerary item error:", error);
     return sendResponse(res, {
       status: 500,
       success: false,
@@ -303,19 +259,12 @@ const updateItineraryItem = async (req, res) => {
   }
 };
 
-// Delete itinerary item
+// Delete itinerary item (aligned with Prisma models)
 const deleteItineraryItem = async (req, res) => {
   try {
     const { tripId, itemId } = req.params;
     const userId = req.user.id;
-
-    // Check if user has access to this trip
-    const tripMember = await prisma.tripMember.findFirst({
-      where: {
-        tripId: parseInt(tripId),
-        userId: userId
-      }
-    });
+    const tripMember = await prisma.tripMember.findFirst({ where: { tripId, userId } });
 
     if (!tripMember) {
       return sendResponse(res, {
@@ -325,13 +274,7 @@ const deleteItineraryItem = async (req, res) => {
       });
     }
 
-    // Check if item exists and belongs to this trip
-    const existingItem = await prisma.itineraryItem.findFirst({
-      where: {
-        id: parseInt(itemId),
-        tripId: parseInt(tripId)
-      }
-    });
+    const existingItem = await prisma.itineraryItem.findUnique({ where: { id: itemId }, include: { day: true } });
 
     if (!existingItem) {
       return sendResponse(res, {
@@ -341,10 +284,7 @@ const deleteItineraryItem = async (req, res) => {
       });
     }
 
-    // Delete the item
-    await prisma.itineraryItem.delete({
-      where: { id: parseInt(itemId) }
-    });
+    await prisma.itineraryItem.delete({ where: { id: itemId } });
 
     return sendResponse(res, {
       status: 200,
@@ -352,7 +292,6 @@ const deleteItineraryItem = async (req, res) => {
       message: "Itinerary item deleted successfully.",
     });
   } catch (error) {
-    console.error("Delete itinerary item error:", error);
     return sendResponse(res, {
       status: 500,
       success: false,
@@ -361,12 +300,12 @@ const deleteItineraryItem = async (req, res) => {
   }
 };
 
-// Reorder itinerary items
+// Reorder itinerary items (aligned with Prisma models)
 const reorderItineraryItems = async (req, res) => {
   try {
     const { tripId } = req.params;
     const userId = req.user.id;
-    const { items } = req.body; // Array of { id, day, order }
+    const { items } = req.body; // [{ id, dayNumber, sortOrder }]
 
     if (!items || !Array.isArray(items)) {
       return sendResponse(res, {
@@ -376,13 +315,7 @@ const reorderItineraryItems = async (req, res) => {
       });
     }
 
-    // Check if user has access to this trip
-    const tripMember = await prisma.tripMember.findFirst({
-      where: {
-        tripId: parseInt(tripId),
-        userId: userId
-      }
-    });
+    const tripMember = await prisma.tripMember.findFirst({ where: { tripId, userId } });
 
     if (!tripMember) {
       return sendResponse(res, {
@@ -392,15 +325,25 @@ const reorderItineraryItems = async (req, res) => {
       });
     }
 
-    // Update items in a transaction
     await prisma.$transaction(async (tx) => {
       for (const item of items) {
+        let targetDay = await tx.itineraryDay.findFirst({
+          where: { tripId, dayNumber: parseInt(item.dayNumber) }
+        });
+        if (!targetDay) {
+          const trip = await tx.trip.findUnique({ where: { id: tripId } });
+          const date = new Date(trip.startDate);
+          date.setDate(date.getDate() + (parseInt(item.dayNumber) - 1));
+          targetDay = await tx.itineraryDay.create({
+            data: { tripId, dayNumber: parseInt(item.dayNumber), date }
+          });
+        }
+
         await tx.itineraryItem.update({
-          where: { id: parseInt(item.id) },
+          where: { id: item.id },
           data: {
-            day: parseInt(item.day),
-            order: parseInt(item.order),
-            updatedAt: new Date()
+            dayId: targetDay.id,
+            sortOrder: parseInt(item.sortOrder)
           }
         });
       }
@@ -412,7 +355,6 @@ const reorderItineraryItems = async (req, res) => {
       message: "Itinerary items reordered successfully.",
     });
   } catch (error) {
-    console.error("Reorder itinerary items error:", error);
     return sendResponse(res, {
       status: 500,
       success: false,
@@ -421,10 +363,92 @@ const reorderItineraryItems = async (req, res) => {
   }
 };
 
+// Generate itinerary from natural language prompt with explanations
+const generateItinerary = async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { prompt } = req.body;
+    const userId = req.user.id;
+
+    if (!prompt || prompt.trim().length === 0) {
+      return sendResponse(res, { status: 400, success: false, message: "Prompt is required." });
+    }
+
+    const trip = await prisma.trip.findUnique({ where: { id: tripId } });
+    if (!trip) {
+      return sendResponse(res, { status: 404, success: false, message: "Trip not found." });
+    }
+
+    const days = Math.max(1, Math.ceil((new Date(trip.endDate) - new Date(trip.startDate)) / (1000 * 60 * 60 * 24)) + 1);
+
+    const preferences = await prisma.userPreferences.findUnique({ where: { userId } });
+
+    const explanations = [];
+    const createdItems = [];
+
+    await prisma.$transaction(async (tx) => {
+      for (let d = 1; d <= days; d++) {
+        let dayRec = await tx.itineraryDay.findFirst({ where: { tripId, dayNumber: d } });
+        if (!dayRec) {
+          const date = new Date(trip.startDate);
+          date.setDate(date.getDate() + (d - 1));
+          dayRec = await tx.itineraryDay.create({ data: { tripId, dayNumber: d, date } });
+        }
+
+        const templates = [
+          { type: 'ACTIVITY', title: `Morning activity in ${trip.destinationCity || 'destination'}`, sortOrder: 1 },
+          { type: 'RESTAURANT', title: 'Lunch at recommended spot', sortOrder: 2 },
+          { type: 'ACTIVITY', title: 'Afternoon highlight', sortOrder: 3 },
+          { type: 'RESTAURANT', title: 'Dinner with local cuisine', sortOrder: 4 }
+        ];
+
+        for (const t of templates) {
+          const exp = {
+            reason: `Selected ${t.type} based on prompt and preferences`,
+            prompt,
+            preferences
+          };
+          explanations.push(exp);
+
+          const item = await tx.itineraryItem.create({
+            data: {
+              dayId: dayRec.id,
+              type: t.type,
+              title: t.title,
+              sortOrder: t.sortOrder,
+              explainability: exp
+            }
+          });
+          createdItems.push(item);
+        }
+      }
+
+      await tx.recommendationLog.create({
+        data: {
+          userId,
+          tripId,
+          context: { prompt, preferences },
+          explanations
+        }
+      });
+    });
+
+    return sendResponse(res, {
+      status: 201,
+      success: true,
+      message: "Itinerary generated successfully.",
+      data: { items: createdItems }
+    });
+  } catch (error) {
+    return sendResponse(res, { status: 500, success: false, message: "Internal server error." });
+  }
+};
+
 module.exports = {
   getTripItinerary,
   addItineraryItem,
   updateItineraryItem,
   deleteItineraryItem,
-  reorderItineraryItems
+  reorderItineraryItems,
+  generateItinerary
 };

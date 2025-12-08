@@ -23,7 +23,7 @@ const Budget = () => {
     try {
       setLoading(true);
       const response = await fetcher(`/api/budget/trip/${tripId}`);
-      setBudgetData(response);
+      setBudgetData(response.data || response);
     } catch (error) {
       console.error('Error fetching budget data:', error);
       toast.error('Failed to load budget data');

@@ -21,7 +21,7 @@ exports.protect = async (req, res, next) => {
 
     const user = await prisma.appUser.findUnique({
       where: { id: decoded.id },
-      select: { id: true, email: true, username: true, fullName: true, isActive: true },
+      select: { id: true, email: true, username: true, fullName: true, role: true, isActive: true },
     });
 
     if (!user || !user.isActive) {

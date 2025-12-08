@@ -49,7 +49,8 @@ const signinController = async (req, res) => {
         id: user.id, 
         username: user.username, 
         email: user.email,
-        fullName: user.fullName
+        fullName: user.fullName,
+        role: user.role
       },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
@@ -60,7 +61,7 @@ const signinController = async (req, res) => {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
       secure: isProd,
-      sameSite: isProd ? "None" : "strict",
+      sameSite: isProd ? "None" : "lax",
     });
 
     return sendResponse(res, {
@@ -72,6 +73,7 @@ const signinController = async (req, res) => {
         email: user.email,
         username: user.username,
         fullName: user.fullName,
+        role: user.role,
       },
     });
   } catch (error) {
