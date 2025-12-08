@@ -5,7 +5,8 @@ const {
   addItineraryItem,
   updateItineraryItem,
   deleteItineraryItem,
-  reorderItineraryItems
+  reorderItineraryItems,
+  generateItinerary
 } = require("../controller/itinerary.controller");
 
 const router = express.Router();
@@ -19,5 +20,6 @@ router.post("/trip/:tripId/items", addItineraryItem);
 router.put("/trip/:tripId/items/:itemId", updateItineraryItem);
 router.delete("/trip/:tripId/items/:itemId", deleteItineraryItem);
 router.put("/trip/:tripId/reorder", reorderItineraryItems);
+router.post("/trip/:tripId/generate", generateItinerary);
 
 module.exports = router;

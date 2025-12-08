@@ -19,6 +19,7 @@ model AppUser {
   profilePhotoUrl   String?  @map("profile_photo_url")
   locale            String   @default("en-US")
   currency          String   @default("USD") @db.Char(3)
+  role              UserRole @default(USER)
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
   isActive          Boolean  @default(true) @map("is_active")
@@ -39,6 +40,13 @@ model AppUser {
   sentMessages      TripMessage[]
 
   @@map("app_user")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+
+  @@map("user_role")
 }
 
 model UserSecurity {

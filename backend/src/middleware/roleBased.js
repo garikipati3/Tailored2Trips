@@ -2,7 +2,7 @@ const { sendResponse } = require("../utils/sendResponse");
 
 exports.restrictToRoles = (...allowedRoles) => {
   return (req, res, next) => {
-    if (!req.user || !req.user.Role) {
+    if (!req.user || !req.user.role) {
       return sendResponse(res, {
         status: 403,
         success: false,
@@ -10,7 +10,7 @@ exports.restrictToRoles = (...allowedRoles) => {
       });
     }
 
-    if (!allowedRoles.includes(req.user.Role)) {
+    if (!allowedRoles.includes(req.user.role)) {
       return sendResponse(res, {
         status: 403,
         success: false,

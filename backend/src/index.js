@@ -19,10 +19,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const FE_URL = process.env.FE_URL || "http://localhost:5173";
-const allowedOrigins = [FE_URL, "http://localhost:5173", "http://localhost:5175"];
+const allowedOrigins = [FE_URL, "http://localhost:5173", "http://localhost:5175", "http://127.0.0.1:5173"];
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    const isLocalHost = origin && (/^http:\/\/localhost:\d+$/i.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/i.test(origin));
+    if (!origin || allowedOrigins.includes(origin) || isLocalHost) {
       callback(null, true);
     } else {
       callback(new Error(`CORS: origin ${origin} not allowed`), false);

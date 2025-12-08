@@ -6,7 +6,7 @@ const signout = (req, res) => {
   res.cookie("token", "", {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? "None" : "Strict",
+    sameSite: isProd ? "None" : "lax",
     maxAge: 0,
   });
 

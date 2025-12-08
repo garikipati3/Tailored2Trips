@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import TopBar from '../components/TopBar';
-import fetcher from '../utils/fetcher';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import TopBar from "../components/TopBar";
+import fetcher from "../utils/fetcher";
 
 const Itinerary = () => {
   const { tripId } = useParams();
@@ -13,6 +13,8 @@ const Itinerary = () => {
   const [selectedDay, setSelectedDay] = useState(1);
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [prompt, setPrompt] = useState("");
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     fetchItinerary();
@@ -26,15 +28,42 @@ const Itinerary = () => {
         setTrip(response.data.trip);
         setItinerary(response.data.itinerary);
       } else {
-        toast.error(response.message || 'Failed to load itinerary');
-        navigate('/trips');
+        toast.error(response.message || "Failed to load itinerary");
+        navigate("/trips");
       }
     } catch (error) {
-      console.error('Fetch itinerary error:', error);
-      toast.error('Failed to load itinerary');
-      navigate('/trips');
+      console.error("Fetch itinerary error:", error);
+      toast.error("Failed to load itinerary");
+      navigate("/trips");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) {
+      toast.info("Describe your trip preferences first");
+      return;
+    }
+    try {
+      setGenerating(true);
+      const response = await fetcher(`/api/itinerary/trip/${tripId}/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      if (response.success) {
+        toast.success("Itinerary generated");
+        setPrompt("");
+        fetchItinerary();
+      } else {
+        toast.error(response.message || "Failed to generate itinerary");
+      }
+    } catch (e) {
+      console.error("Generate itinerary error:", e);
+      toast.error("Failed to generate itinerary");
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -49,42 +78,45 @@ const Itinerary = () => {
   };
 
   const handleDeleteItem = async (itemId) => {
-    if (!window.confirm('Are you sure you want to delete this item?')) return;
+    if (!window.confirm("Are you sure you want to delete this item?")) return;
 
     try {
-      const response = await fetcher(`/api/itinerary/trip/${tripId}/items/${itemId}`, {
-        method: 'DELETE'
-      });
+      const response = await fetcher(
+        `/api/itinerary/trip/${tripId}/items/${itemId}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (response.success) {
-        toast.success('Item deleted successfully');
+        toast.success("Item deleted successfully");
         fetchItinerary();
       } else {
-        toast.error(response.message || 'Failed to delete item');
+        toast.error(response.message || "Failed to delete item");
       }
     } catch (error) {
-      console.error('Delete item error:', error);
-      toast.error('Failed to delete item');
+      console.error("Delete item error:", error);
+      toast.error("Failed to delete item");
     }
   };
 
   const formatTime = (timeString) => {
-    if (!timeString) return '';
+    if (!timeString) return "";
     const time = new Date(timeString);
-    return time.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: true 
+    return time.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
     });
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -102,7 +134,7 @@ const Itinerary = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <TopBar />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -112,10 +144,34 @@ const Itinerary = () => {
           >
             ← Back to Trip Details
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">{trip?.title} - Itinerary</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {trip?.title} - Itinerary
+          </h1>
           <p className="text-gray-600 mt-2">
-            {trip?.destination} • {formatDate(trip?.startDate)} - {formatDate(trip?.endDate)}
+            {trip?.destination} • {formatDate(trip?.startDate)} -{" "}
+            {formatDate(trip?.endDate)}
           </p>
+          <div className="mt-4 bg-white border rounded-lg p-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Describe your trip
+            </label>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="e.g., 5-day budget-friendly trip with hiking and local food"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              rows="3"
+            />
+            <div className="mt-2">
+              <button
+                onClick={handleGenerate}
+                disabled={generating}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {generating ? "Generating..." : "Generate with AI"}
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -130,19 +186,20 @@ const Itinerary = () => {
                     onClick={() => setSelectedDay(day.day)}
                     className={`w-full text-left p-3 rounded-lg transition-colors ${
                       selectedDay === day.day
-                        ? 'bg-blue-100 text-blue-800 border-2 border-blue-300'
-                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                        ? "bg-blue-100 text-blue-800 border-2 border-blue-300"
+                        : "bg-gray-50 text-gray-700 hover:bg-gray-100"
                     }`}
                   >
                     <div className="font-medium">Day {day.day}</div>
                     <div className="text-sm opacity-75">
-                      {new Date(day.date).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric' 
+                      {new Date(day.date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
                       })}
                     </div>
                     <div className="text-xs mt-1">
-                      {day.items.length} {day.items.length === 1 ? 'item' : 'items'}
+                      {day.items.length}{" "}
+                      {day.items.length === 1 ? "item" : "items"}
                     </div>
                   </button>
                 ))}
@@ -152,9 +209,9 @@ const Itinerary = () => {
 
           {/* Day Details */}
           <div className="lg:col-span-3">
-            {itinerary.find(day => day.day === selectedDay) && (
+            {itinerary.find((day) => day.day === selectedDay) && (
               <DayView
-                day={itinerary.find(day => day.day === selectedDay)}
+                day={itinerary.find((day) => day.day === selectedDay)}
                 onAddItem={handleAddItem}
                 onEditItem={handleEditItem}
                 onDeleteItem={handleDeleteItem}
@@ -195,11 +252,11 @@ const DayView = ({ day, onAddItem, onEditItem, onDeleteItem, formatTime }) => {
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Day {day.day}</h2>
             <p className="text-gray-600">
-              {new Date(day.date).toLocaleDateString('en-US', { 
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
+              {new Date(day.date).toLocaleDateString("en-US", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
               })}
             </p>
           </div>
@@ -215,7 +272,9 @@ const DayView = ({ day, onAddItem, onEditItem, onDeleteItem, formatTime }) => {
       <div className="p-6">
         {day.items.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-gray-400 text-lg mb-4">No items planned for this day</div>
+            <div className="text-gray-400 text-lg mb-4">
+              No items planned for this day
+            </div>
             <button
               onClick={onAddItem}
               className="text-blue-600 hover:text-blue-800 font-medium"
@@ -246,14 +305,14 @@ const DayView = ({ day, onAddItem, onEditItem, onDeleteItem, formatTime }) => {
 const ItineraryItem = ({ item, index, onEdit, onDelete, formatTime }) => {
   const getCategoryColor = (category) => {
     const colors = {
-      ACCOMMODATION: 'bg-purple-100 text-purple-800',
-      TRANSPORTATION: 'bg-blue-100 text-blue-800',
-      ACTIVITY: 'bg-green-100 text-green-800',
-      RESTAURANT: 'bg-orange-100 text-orange-800',
-      SHOPPING: 'bg-pink-100 text-pink-800',
-      OTHER: 'bg-gray-100 text-gray-800'
+      HOTEL: "bg-purple-100 text-purple-800",
+      TRANSPORT: "bg-blue-100 text-blue-800",
+      ACTIVITY: "bg-green-100 text-green-800",
+      RESTAURANT: "bg-orange-100 text-orange-800",
+      FREE_TIME: "bg-gray-100 text-gray-800",
+      FLIGHT: "bg-blue-100 text-blue-800",
     };
-    return colors[category] || colors.OTHER;
+    return colors[category] || "bg-gray-100 text-gray-800";
   };
 
   return (
@@ -261,9 +320,15 @@ const ItineraryItem = ({ item, index, onEdit, onDelete, formatTime }) => {
       <div className="flex justify-between items-start">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <span className="text-sm font-medium text-gray-500">#{index + 1}</span>
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(item.category)}`}>
-              {item.category}
+            <span className="text-sm font-medium text-gray-500">
+              #{index + 1}
+            </span>
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(
+                item.type || item.category
+              )}`}
+            >
+              {item.type || item.category}
             </span>
             {item.startTime && (
               <span className="text-sm text-gray-600">
@@ -272,33 +337,35 @@ const ItineraryItem = ({ item, index, onEdit, onDelete, formatTime }) => {
               </span>
             )}
           </div>
-          
+
           <h4 className="font-semibold text-gray-900 mb-1">{item.title}</h4>
-          
+
           {item.description && (
             <p className="text-gray-600 text-sm mb-2">{item.description}</p>
           )}
-          
+
           {item.place && (
             <div className="text-sm text-gray-500 mb-2">
               📍 {item.place.name}
-              {item.place.address && <span className="ml-2">{item.place.address}</span>}
+              {item.place.address && (
+                <span className="ml-2">{item.place.address}</span>
+              )}
             </div>
           )}
-          
-          {item.estimatedCost && (
+
+          {typeof item.costCents === "number" && (
             <div className="text-sm text-green-600 font-medium">
-              Estimated cost: ${item.estimatedCost}
+              Estimated cost: ${(item.costCents / 100).toFixed(2)}
             </div>
           )}
-          
+
           {item.notes && (
             <div className="text-sm text-gray-500 mt-2 italic">
               Note: {item.notes}
             </div>
           )}
         </div>
-        
+
         <div className="flex gap-2 ml-4">
           <button
             onClick={onEdit}
@@ -321,20 +388,20 @@ const ItineraryItem = ({ item, index, onEdit, onDelete, formatTime }) => {
 // Add Item Modal Component
 const AddItemModal = ({ tripId, day, item, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
-    title: item?.title || '',
-    description: item?.description || '',
-    startTime: item?.startTime ? formatTimeForInput(item.startTime) : '',
-    endTime: item?.endTime ? formatTimeForInput(item.endTime) : '',
-    category: item?.category || 'ACTIVITY',
-    estimatedCost: item?.estimatedCost || '',
-    notes: item?.notes || '',
-    placeName: item?.place?.name || '',
-    placeAddress: item?.place?.address || ''
+    title: item?.title || "",
+    description: item?.description || "",
+    startTime: item?.startTime ? formatTimeForInput(item.startTime) : "",
+    endTime: item?.endTime ? formatTimeForInput(item.endTime) : "",
+    category: item?.category || "ACTIVITY",
+    estimatedCost: item?.estimatedCost || "",
+    notes: item?.notes || "",
+    placeName: item?.place?.name || "",
+    placeAddress: item?.place?.address || "",
   });
   const [loading, setLoading] = useState(false);
 
   function formatTimeForInput(timeString) {
-    if (!timeString) return '';
+    if (!timeString) return "";
     const time = new Date(timeString);
     return time.toTimeString().slice(0, 5);
   }
@@ -342,39 +409,43 @@ const AddItemModal = ({ tripId, day, item, onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.title.trim()) {
-      toast.error('Title is required');
+      toast.error("Title is required");
       return;
     }
 
     try {
       setLoading(true);
-      const url = item 
+      const url = item
         ? `/api/itinerary/trip/${tripId}/items/${item.id}`
         : `/api/itinerary/trip/${tripId}/items`;
-      
-      const method = item ? 'PUT' : 'POST';
-      
+
+      const method = item ? "PUT" : "POST";
+
       const payload = {
         ...formData,
         day: day,
-        estimatedCost: formData.estimatedCost ? parseFloat(formData.estimatedCost) : null
+        estimatedCost: formData.estimatedCost
+          ? parseFloat(formData.estimatedCost)
+          : null,
       };
 
       const response = await fetcher(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       if (response.success) {
-        toast.success(item ? 'Item updated successfully' : 'Item added successfully');
+        toast.success(
+          item ? "Item updated successfully" : "Item added successfully"
+        );
         onSuccess();
       } else {
-        toast.error(response.message || 'Failed to save item');
+        toast.error(response.message || "Failed to save item");
       }
     } catch (error) {
-      console.error('Save item error:', error);
-      toast.error('Failed to save item');
+      console.error("Save item error:", error);
+      toast.error("Failed to save item");
     } finally {
       setLoading(false);
     }
@@ -385,7 +456,7 @@ const AddItemModal = ({ tripId, day, item, onClose, onSuccess }) => {
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">
-            {item ? 'Edit Item' : 'Add New Item'} - Day {day}
+            {item ? "Edit Item" : "Add New Item"} - Day {day}
           </h3>
         </div>
 
@@ -397,7 +468,9 @@ const AddItemModal = ({ tripId, day, item, onClose, onSuccess }) => {
             <input
               type="text"
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="e.g., Visit Eiffel Tower"
               required
@@ -410,7 +483,9 @@ const AddItemModal = ({ tripId, day, item, onClose, onSuccess }) => {
             </label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               rows="3"
               placeholder="Additional details about this activity..."
@@ -425,7 +500,9 @@ const AddItemModal = ({ tripId, day, item, onClose, onSuccess }) => {
               <input
                 type="time"
                 value={formData.startTime}
-                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, startTime: e.target.value })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
@@ -436,7 +513,9 @@ const AddItemModal = ({ tripId, day, item, onClose, onSuccess }) => {
               <input
                 type="time"
                 value={formData.endTime}
-                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, endTime: e.target.value })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
@@ -448,7 +527,9 @@ const AddItemModal = ({ tripId, day, item, onClose, onSuccess }) => {
             </label>
             <select
               value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, category: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="ACTIVITY">Activity</option>
@@ -468,7 +549,9 @@ const AddItemModal = ({ tripId, day, item, onClose, onSuccess }) => {
               <input
                 type="text"
                 value={formData.placeName}
-                onChange={(e) => setFormData({ ...formData, placeName: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, placeName: e.target.value })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="e.g., Eiffel Tower"
               />
@@ -481,7 +564,9 @@ const AddItemModal = ({ tripId, day, item, onClose, onSuccess }) => {
                 type="number"
                 step="0.01"
                 value={formData.estimatedCost}
-                onChange={(e) => setFormData({ ...formData, estimatedCost: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, estimatedCost: e.target.value })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="0.00"
               />
@@ -495,7 +580,9 @@ const AddItemModal = ({ tripId, day, item, onClose, onSuccess }) => {
             <input
               type="text"
               value={formData.placeAddress}
-              onChange={(e) => setFormData({ ...formData, placeAddress: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, placeAddress: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Full address of the place"
             />
@@ -507,7 +594,9 @@ const AddItemModal = ({ tripId, day, item, onClose, onSuccess }) => {
             </label>
             <textarea
               value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, notes: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               rows="2"
               placeholder="Any additional notes or reminders..."
@@ -527,7 +616,7 @@ const AddItemModal = ({ tripId, day, item, onClose, onSuccess }) => {
               disabled={loading}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
-              {loading ? 'Saving...' : (item ? 'Update Item' : 'Add Item')}
+              {loading ? "Saving..." : item ? "Update Item" : "Add Item"}
             </button>
           </div>
         </form>

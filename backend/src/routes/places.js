@@ -5,11 +5,14 @@ const {
   searchPlaces,
   getPlaceDetails,
   getNearbyPlaces,
-  getPlacePhoto
+  getPlacePhoto,
+  autocompletePlaces
 } = require("../controller/places.controller");
 
 // Search places
 router.get("/search", protect, searchPlaces);
+// Autocomplete place suggestions
+router.get("/autocomplete", protect, autocompletePlaces);
 
 // Get place details by place_id
 router.get("/details/:placeId", protect, getPlaceDetails);
