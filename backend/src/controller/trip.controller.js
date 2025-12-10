@@ -45,7 +45,12 @@ const createTrip = async (req, res) => {
         endDate: end,
         totalBudgetCents: budget ? Math.round(parseFloat(budget) * 100) : null,
         visibility: isPublic ? "PUBLIC" : "PRIVATE",
+
         ownerId: userId,
+        owner: {
+          connect: { user_id: userId },
+        },
+
         members: {
           create: {
             userId,
