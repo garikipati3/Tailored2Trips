@@ -47,9 +47,6 @@ const createTrip = async (req, res) => {
         visibility: isPublic ? "PUBLIC" : "PRIVATE",
 
         ownerId: userId,
-        owner: {
-          connect: { user_id: userId },
-        },
 
         members: {
           create: {
