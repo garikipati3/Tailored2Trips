@@ -17,7 +17,9 @@ const AuthButtons = () => {
       if (res.success) {
         toast.success("Signed out successfully!");
       }
-      navigate("/");
+      // Force redirect to Sign In so auth state remounts and cookie changes are applied
+      navigate("/auth/signin", { replace: true });
+      window.location.assign("/auth/signin");
     } catch (err) {
       console.error("Sign out error:", err);
     }

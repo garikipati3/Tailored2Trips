@@ -175,8 +175,9 @@ const Places = () => {
           <h2 className="text-lg font-medium text-gray-900 mb-4">Search Places</h2>
           <PlaceSearch
             onPlaceSelect={handlePlaceSelect}
-            placeholder="Search for restaurants, attractions, hotels..."
+            placeholder="Search cities or places (type 3+ letters)..."
             className="max-w-md"
+            useAutocomplete={true}
           />
         </div>
 
