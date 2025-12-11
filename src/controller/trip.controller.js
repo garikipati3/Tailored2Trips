@@ -13,7 +13,7 @@ const createTrip = async (req, res) => {
       endDate,
       budget,
       isPublic,
-      coverImageUrl
+      coverImageUrl,
     } = req.body;
 
     // Validation
@@ -40,20 +40,19 @@ const createTrip = async (req, res) => {
       data: {
         title,
         description,
-        destination,
+        destinationCity: destination,
         startDate: start,
         endDate: end,
-        budget: budget ? parseFloat(budget) : null,
-        isPublic: isPublic || false,
-        coverImageUrl,
-        createdById: userId,
+        totalBudgetCents: budget ? Math.round(parseFloat(budget) * 100) : null,
+        visibility: isPublic ? "PUBLIC" : "PRIVATE",
+        ownerId: userId,
         members: {
           create: {
             userId,
             role: "OWNER",
-            joinedAt: new Date()
-          }
-        }
+            joinedAt: new Date(),
+          },
+        },
       },
       include: {
         members: {
@@ -63,32 +62,49 @@ const createTrip = async (req, res) => {
                 id: true,
                 username: true,
                 fullName: true,
-                profilePhotoUrl: true
-              }
-            }
-          }
+                profilePhotoUrl: true,
+              },
+            },
+          },
         },
-        createdBy: {
+        owner: {
           select: {
             id: true,
             username: true,
-            fullName: true
-          }
+            fullName: true,
+          },
         },
-        _count: {
-          select: {
-            itineraryItems: true,
-            expenses: true
-          }
-        }
-      }
+      },
     });
+
+    const itineraryItemCount = await prisma.itineraryItem.count({
+      where: { day: { tripId: trip.id } },
+    });
+    const budgetLineCount = await prisma.tripBudgetLine.count({
+      where: { tripId: trip.id },
+    });
+
+    const shaped = {
+      id: trip.id,
+      title: trip.title,
+      description: trip.description,
+      destination: trip.destinationCity,
+      startDate: trip.startDate,
+      endDate: trip.endDate,
+      budget: trip.totalBudgetCents
+        ? Math.round(trip.totalBudgetCents / 100)
+        : null,
+      isPublic: trip.visibility === "PUBLIC",
+      members: trip.members,
+      createdBy: trip.owner,
+      _count: { itineraryItems: itineraryItemCount, expenses: budgetLineCount },
+    };
 
     return sendResponse(res, {
       status: 201,
       success: true,
       message: "Trip created successfully.",
-      data: trip,
+      data: shaped,
     });
   } catch (error) {
     console.error("Create trip error:", error);
@@ -112,22 +128,22 @@ const getUserTrips = async (req, res) => {
     let whereClause = {
       members: {
         some: {
-          userId
-        }
-      }
+          userId,
+        },
+      },
     };
 
     // Filter by status if provided
     if (status) {
       const now = new Date();
-      if (status === 'upcoming') {
+      if (status === "upcoming") {
         whereClause.startDate = { gt: now };
-      } else if (status === 'ongoing') {
+      } else if (status === "ongoing") {
         whereClause.AND = [
           { startDate: { lte: now } },
-          { endDate: { gte: now } }
+          { endDate: { gte: now } },
         ];
-      } else if (status === 'completed') {
+      } else if (status === "completed") {
         whereClause.endDate = { lt: now };
       }
     }
@@ -136,7 +152,7 @@ const getUserTrips = async (req, res) => {
       where: whereClause,
       skip,
       take,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
         members: {
           include: {
@@ -145,43 +161,64 @@ const getUserTrips = async (req, res) => {
                 id: true,
                 username: true,
                 fullName: true,
-                profilePhotoUrl: true
-              }
-            }
-          }
+                profilePhotoUrl: true,
+              },
+            },
+          },
         },
-        createdBy: {
+        owner: {
           select: {
             id: true,
             username: true,
-            fullName: true
-          }
+            fullName: true,
+          },
         },
-        _count: {
-          select: {
-            itineraryItems: true,
-            expenses: true
-          }
-        }
-      }
+      },
     });
 
-    const totalTrips = await prisma.trip.count({
-      where: whereClause
-    });
+    const totalTrips = await prisma.trip.count({ where: whereClause });
+
+    const shapedTrips = await Promise.all(
+      trips.map(async (t) => {
+        const itineraryItemCount = await prisma.itineraryItem.count({
+          where: { day: { tripId: t.id } },
+        });
+        const budgetLineCount = await prisma.tripBudgetLine.count({
+          where: { tripId: t.id },
+        });
+        return {
+          id: t.id,
+          title: t.title,
+          description: t.description,
+          destination: t.destinationCity,
+          startDate: t.startDate,
+          endDate: t.endDate,
+          budget: t.totalBudgetCents
+            ? Math.round(t.totalBudgetCents / 100)
+            : null,
+          isPublic: t.visibility === "PUBLIC",
+          members: t.members,
+          createdBy: t.owner,
+          _count: {
+            itineraryItems: itineraryItemCount,
+            expenses: budgetLineCount,
+          },
+        };
+      })
+    );
 
     return sendResponse(res, {
       status: 200,
       success: true,
       message: "Trips retrieved successfully.",
       data: {
-        trips,
+        trips: shapedTrips,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
           total: totalTrips,
-          pages: Math.ceil(totalTrips / parseInt(limit))
-        }
+          pages: Math.ceil(totalTrips / parseInt(limit)),
+        },
       },
     });
   } catch (error) {
@@ -208,11 +245,11 @@ const getTripById = async (req, res) => {
           {
             members: {
               some: {
-                userId
-              }
-            }
-          }
-        ]
+                userId,
+              },
+            },
+          },
+        ],
       },
       include: {
         members: {
@@ -223,47 +260,44 @@ const getTripById = async (req, res) => {
                 username: true,
                 fullName: true,
                 profilePhotoUrl: true,
-                email: true
-              }
-            }
-          }
+                email: true,
+              },
+            },
+          },
         },
         createdBy: {
           select: {
             id: true,
             username: true,
-            fullName: true
-          }
+            fullName: true,
+          },
         },
         itineraryItems: {
-          orderBy: [
-            { date: 'asc' },
-            { startTime: 'asc' }
-          ],
+          orderBy: [{ date: "asc" }, { startTime: "asc" }],
           include: {
-            place: true
-          }
+            place: true,
+          },
         },
         expenses: {
-          orderBy: { date: 'desc' },
+          orderBy: { date: "desc" },
           include: {
             category: true,
             paidBy: {
               select: {
                 id: true,
                 username: true,
-                fullName: true
-              }
-            }
-          }
+                fullName: true,
+              },
+            },
+          },
         },
         _count: {
           select: {
             itineraryItems: true,
-            expenses: true
-          }
-        }
-      }
+            expenses: true,
+          },
+        },
+      },
     });
 
     if (!trip) {
@@ -303,7 +337,7 @@ const updateTrip = async (req, res) => {
       endDate,
       budget,
       isPublic,
-      coverImageUrl
+      coverImageUrl,
     } = req.body;
 
     // Check if user has permission to update the trip
@@ -313,10 +347,10 @@ const updateTrip = async (req, res) => {
         members: {
           some: {
             userId,
-            role: { in: ['OWNER', 'ADMIN'] }
-          }
-        }
-      }
+            role: { in: ["OWNER", "ADMIN"] },
+          },
+        },
+      },
     });
 
     if (!existingTrip) {
@@ -349,7 +383,9 @@ const updateTrip = async (req, res) => {
         ...(destination !== undefined && { destination }),
         ...(startDate !== undefined && { startDate: new Date(startDate) }),
         ...(endDate !== undefined && { endDate: new Date(endDate) }),
-        ...(budget !== undefined && { budget: budget ? parseFloat(budget) : null }),
+        ...(budget !== undefined && {
+          budget: budget ? parseFloat(budget) : null,
+        }),
         ...(isPublic !== undefined && { isPublic }),
         ...(coverImageUrl !== undefined && { coverImageUrl }),
       },
@@ -361,25 +397,25 @@ const updateTrip = async (req, res) => {
                 id: true,
                 username: true,
                 fullName: true,
-                profilePhotoUrl: true
-              }
-            }
-          }
+                profilePhotoUrl: true,
+              },
+            },
+          },
         },
         createdBy: {
           select: {
             id: true,
             username: true,
-            fullName: true
-          }
+            fullName: true,
+          },
         },
         _count: {
           select: {
             itineraryItems: true,
-            expenses: true
-          }
-        }
-      }
+            expenses: true,
+          },
+        },
+      },
     });
 
     return sendResponse(res, {
@@ -411,22 +447,23 @@ const deleteTrip = async (req, res) => {
         members: {
           some: {
             userId,
-            role: 'OWNER'
-          }
-        }
-      }
+            role: "OWNER",
+          },
+        },
+      },
     });
 
     if (!existingTrip) {
       return sendResponse(res, {
         status: 404,
         success: false,
-        message: "Trip not found or insufficient permissions. Only owners can delete trips.",
+        message:
+          "Trip not found or insufficient permissions. Only owners can delete trips.",
       });
     }
 
     await prisma.trip.delete({
-      where: { id: tripId }
+      where: { id: tripId },
     });
 
     return sendResponse(res, {
@@ -449,7 +486,7 @@ const addTripMember = async (req, res) => {
   try {
     const userId = req.user.id;
     const { tripId } = req.params;
-    const { email, role = 'MEMBER' } = req.body;
+    const { email, role = "MEMBER" } = req.body;
 
     // Check if user has permission to add members
     const trip = await prisma.trip.findFirst({
@@ -458,10 +495,10 @@ const addTripMember = async (req, res) => {
         members: {
           some: {
             userId,
-            role: { in: ['OWNER', 'ADMIN'] }
-          }
-        }
-      }
+            role: { in: ["OWNER", "ADMIN"] },
+          },
+        },
+      },
     });
 
     if (!trip) {
@@ -475,7 +512,7 @@ const addTripMember = async (req, res) => {
     // Find user by email
     const userToAdd = await prisma.appUser.findUnique({
       where: { email },
-      select: { id: true, username: true, fullName: true, email: true }
+      select: { id: true, username: true, fullName: true, email: true },
     });
 
     if (!userToAdd) {
@@ -491,9 +528,9 @@ const addTripMember = async (req, res) => {
       where: {
         tripId_userId: {
           tripId,
-          userId: userToAdd.id
-        }
-      }
+          userId: userToAdd.id,
+        },
+      },
     });
 
     if (existingMember) {
@@ -509,7 +546,7 @@ const addTripMember = async (req, res) => {
         tripId,
         userId: userToAdd.id,
         role,
-        joinedAt: new Date()
+        joinedAt: new Date(),
       },
       include: {
         user: {
@@ -518,10 +555,10 @@ const addTripMember = async (req, res) => {
             username: true,
             fullName: true,
             profilePhotoUrl: true,
-            email: true
-          }
-        }
-      }
+            email: true,
+          },
+        },
+      },
     });
 
     return sendResponse(res, {
@@ -553,10 +590,10 @@ const removeTripMember = async (req, res) => {
         members: {
           some: {
             userId,
-            role: { in: ['OWNER', 'ADMIN'] }
-          }
-        }
-      }
+            role: { in: ["OWNER", "ADMIN"] },
+          },
+        },
+      },
     });
 
     if (!trip) {
@@ -572,9 +609,9 @@ const removeTripMember = async (req, res) => {
       where: {
         tripId_userId: {
           tripId,
-          userId: memberId
-        }
-      }
+          userId: memberId,
+        },
+      },
     });
 
     if (!memberToRemove) {
@@ -585,7 +622,7 @@ const removeTripMember = async (req, res) => {
       });
     }
 
-    if (memberToRemove.role === 'OWNER') {
+    if (memberToRemove.role === "OWNER") {
       return sendResponse(res, {
         status: 400,
         success: false,
@@ -597,9 +634,9 @@ const removeTripMember = async (req, res) => {
       where: {
         tripId_userId: {
           tripId,
-          userId: memberId
-        }
-      }
+          userId: memberId,
+        },
+      },
     });
 
     return sendResponse(res, {
@@ -624,7 +661,7 @@ const updateMemberRole = async (req, res) => {
     const { tripId, memberId } = req.params;
     const { role } = req.body;
 
-    if (!['MEMBER', 'ADMIN'].includes(role)) {
+    if (!["MEMBER", "ADMIN"].includes(role)) {
       return sendResponse(res, {
         status: 400,
         success: false,
@@ -639,17 +676,18 @@ const updateMemberRole = async (req, res) => {
         members: {
           some: {
             userId,
-            role: 'OWNER'
-          }
-        }
-      }
+            role: "OWNER",
+          },
+        },
+      },
     });
 
     if (!trip) {
       return sendResponse(res, {
         status: 404,
         success: false,
-        message: "Trip not found or insufficient permissions. Only owners can change member roles.",
+        message:
+          "Trip not found or insufficient permissions. Only owners can change member roles.",
       });
     }
 
@@ -657,8 +695,8 @@ const updateMemberRole = async (req, res) => {
       where: {
         tripId_userId: {
           tripId,
-          userId: memberId
-        }
+          userId: memberId,
+        },
       },
       data: { role },
       include: {
@@ -668,10 +706,10 @@ const updateMemberRole = async (req, res) => {
             username: true,
             fullName: true,
             profilePhotoUrl: true,
-            email: true
-          }
-        }
-      }
+            email: true,
+          },
+        },
+      },
     });
 
     return sendResponse(res, {
@@ -698,5 +736,5 @@ module.exports = {
   deleteTrip,
   addTripMember,
   removeTripMember,
-  updateMemberRole
+  updateMemberRole,
 };
