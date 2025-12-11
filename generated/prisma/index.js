@@ -396,7 +396,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/bilalyounus/Desktop/Dinakara/Team9 copy/backend/generated/prisma",
+      "value": "/Users/bilalyounus/Desktop/Dinakara/Team9 copy/generated/prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -410,12 +410,11 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/bilalyounus/Desktop/Dinakara/Team9 copy/backend/prisma/schema.prisma",
+    "sourceFilePath": "/Users/bilalyounus/Desktop/Dinakara/Team9 copy/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": null,
-    "schemaEnvPath": "../../.env"
+    "rootEnvPath": null
   },
   "relativePath": "../../prisma",
   "clientVersion": "6.10.1",
