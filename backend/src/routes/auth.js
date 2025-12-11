@@ -12,3 +12,4 @@ authRouter.post("/verifyEmail", verifyEmail);
 authRouter.get("/me", getMe);
 authRouter.get("/signout", signout);
 module.exports = authRouter;
+
